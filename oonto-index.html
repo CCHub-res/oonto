@@ -963,6 +963,78 @@
 }).join('');
     }
 
+    function translateStatus(status){
+  const map = {
+    completed: 'Abgeschlossen',
+    pending: 'Ausstehend',
+    failed: 'Fehlgeschlagen',
+    cancelled: 'Abgebrochen'
+  };
+
+  return map[status] || status || '–';
+}
+
+function translateCategory(category){
+  const map = {
+    transfer: 'Überweisung',
+    rent: 'Miete',
+    shopping: 'Shopping',
+    utilities: 'Fixkosten',
+    salary: 'Gehalt',
+    food: 'Restaurant'
+  };
+
+  return map[category] || category || '–';
+}
+
+function openTransactionDetail(txId){
+  const tx = state.transactions.find(item => item.id === txId);
+
+  if (!tx) {
+    return toast('Transaktion nicht gefunden.');
+  }
+
+  const dir = txDirection(tx);
+  const isExpense = dir === 'expense';
+
+  const amountPrefix = isExpense ? '-' : '+';
+  const directionLabel = isExpense ? 'Ausgang' : 'Eingang';
+
+  const recipient = tx.recipient_name || tx.description || '–';
+  const iban = tx.recipient_iban || '–';
+  const description = tx.description || '–';
+  const reference = tx.reference || '–';
+  const date = tx.executed_at || tx.created_at;
+  const fromAccount = state.account?.iban ? prettyIban(state.account.iban) : '–';
+
+  qs('detail-direction').textContent = directionLabel;
+  qs('detail-amount').textContent = amountPrefix + fmtEUR(tx.amount);
+  qs('detail-status').textContent = translateStatus(tx.status);
+
+  qs('detail-recipient').textContent = recipient;
+  qs('detail-iban').textContent = iban !== '–' ? prettyIban(iban) : '–';
+  qs('detail-description').textContent = description;
+  qs('detail-category').textContent = translateCategory(tx.category);
+  qs('detail-reference').textContent = reference;
+  qs('detail-date').textContent = date
+    ? new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(date))
+    : '–';
+
+  qs('detail-from-account').textContent = fromAccount;
+
+  qs('tx-detail-sheet').classList.add('open');
+}
+
+function closeTransactionDetail(){
+  qs('tx-detail-sheet').classList.remove('open');
+}
+
     function renderHomeTransactions(){
       const list = filteredTransactions(state.homeTxFilter).slice(0,5);
       renderTxList(qs('home-tx-list'), list);
@@ -1020,11 +1092,18 @@
         p_category: category
       });
       if(error) return toast(error.message || 'Überweisung fehlgeschlagen.');
-      toast(`Überweisung erfolgreich. Referenz: ${data}`);
-      qs('transfer-amount').value='';
-      qs('transfer-description').value='';
-      await refreshAll();
-      showScreen('screen-home');
+      const newTransactionId = data;
+
+qs('transfer-amount').value = '';
+qs('transfer-description').value = '';
+
+await refreshAll();
+
+showScreen('screen-home');
+
+setTimeout(() => {
+  openTransactionDetail(newTransactionId);
+}, 250);
     }
 
     function calcUsage(days){
