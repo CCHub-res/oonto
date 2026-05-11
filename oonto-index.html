@@ -227,7 +227,7 @@
               <label for="login-password">Passwort</label>
               <input id="login-password" type="password" placeholder="••••••••" />
             </div>
-            <button class="primary-btn" onclick="doLogin()">Jetzt anmelden</button>
+            <button type="button" class="primary-btn" id="login-button">Jetzt anmelden</button>
           </div>
 
           <div id="register-form" class="form-grid hidden">
@@ -971,6 +971,20 @@
         showScreen('screen-auth');
       }
     });
+    window.doLogin = doLogin;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const loginButton = document.getElementById('login-button');
+
+  if (loginButton) {
+    loginButton.addEventListener('click', async () => {
+      console.log('Login Button wurde geklickt');
+      await doLogin();
+    });
+  } else {
+    console.error('Login Button nicht gefunden');
+  }
+});
   </script>
 </body>
 </html>
