@@ -659,25 +659,51 @@
     }
 
     async function bootstrapUser(){
-      const { data: { session } } = await sb.auth.getSession();
-      if(!session){ showScreen('screen-auth'); return; }
-      state.currentUser = session.user;
-      await refreshAll();
-      showScreen('screen-home');
+  try {
+    const { data: { session }, error } = await sb.auth.getSession();
+
+    if (error) {
+      console.error('Session Fehler:', error);
+      return toast(error.message || 'Session konnte nicht geladen werden.');
     }
 
-    async function refreshAll(){
-      if(!state.currentUser) return;
-      await Promise.all([
-        loadProfileAndAccount(),
-        loadTransactions(),
-        loadNotifications(),
-        loadRecipients(),
-        loadStandingOrders(),
-        loadCards()
-      ]);
-      renderHome();
+    if(!session){
+      showScreen('screen-auth');
+      return;
     }
+
+    state.currentUser = session.user;
+
+    await refreshAll();
+
+    console.log('Login erfolgreich, wechsle zu Home');
+    showScreen('screen-home');
+  } catch (err) {
+    console.error('Bootstrap Fehler:', err);
+    toast('Login erfolgreich, aber die App konnte nicht geladen werden.');
+  }
+}
+
+    async function refreshAll(){
+  if(!state.currentUser) return;
+
+  try {
+    await loadProfileAndAccount();
+
+    await Promise.all([
+      loadTransactions(),
+      loadNotifications(),
+      loadRecipients(),
+      loadStandingOrders(),
+      loadCards()
+    ]);
+
+    renderHome();
+  } catch (err) {
+    console.error('refreshAll Fehler:', err);
+    toast('Login erfolgreich, aber User-Daten konnten nicht geladen werden.');
+  }
+}
 
     async function loadProfileAndAccount(){
       const uid = state.currentUser.id;
@@ -947,13 +973,23 @@
       return String(str ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     }
 
-    sb.auth.onAuthStateChange(async (_event, session) => {
-      if(session?.user){
-        state.currentUser = session.user;
+    sb.auth.onAuthStateChange((_event, session) => {
+  if(session?.user){
+    state.currentUser = session.user;
+
+    setTimeout(async () => {
+      try {
         await refreshAll();
-        if(qs('screen-auth').classList.contains('active')) showScreen('screen-home');
+
+        if(qs('screen-auth').classList.contains('active')) {
+          showScreen('screen-home');
+        }
+      } catch (err) {
+        console.error('AuthStateChange Fehler:', err);
       }
-    });
+    }, 0);
+  }
+});
 
     document.addEventListener('DOMContentLoaded', async () => {
       qs('today-line').textContent = todayLabel();
