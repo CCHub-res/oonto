@@ -226,6 +226,77 @@
   background: #eeeeeb;
   color: #777;
 }
+
+    .tx-item {
+  cursor: pointer;
+}
+
+.tx-detail-hero {
+  background: #121515;
+  color: #fff;
+  border-radius: 24px;
+  padding: 22px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.tx-detail-label {
+  font-size: .9rem;
+  color: rgba(255,255,255,.65);
+  margin-bottom: 8px;
+}
+
+.tx-detail-amount {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  margin-bottom: 10px;
+}
+
+.tx-detail-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.9);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.detail-list {
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.detail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 16px;
+  border-bottom: 1px solid #e8e8e5;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span {
+  color: var(--muted);
+  font-size: .88rem;
+  flex: 0 0 auto;
+}
+
+.detail-row strong {
+  font-size: .9rem;
+  font-weight: 800;
+  text-align: right;
+  word-break: break-word;
+}
   </style>
 </head>
 <body>
@@ -542,6 +613,61 @@
     </div>
   </div>
 
+  <!-- TRANSACTION DETAIL SHEET -->
+<div class="sheet" id="tx-detail-sheet" onclick="if(event.target===this) closeTransactionDetail()">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+
+    <div class="panel-header">
+      <h2>Transaktionsdetails</h2>
+      <button class="icon-btn" onclick="closeTransactionDetail()">×</button>
+    </div>
+
+    <div class="tx-detail-hero">
+      <div class="tx-detail-label" id="detail-direction">Überweisung</div>
+      <div class="tx-detail-amount mono" id="detail-amount">0,00 €</div>
+      <div class="tx-detail-status" id="detail-status">Abgeschlossen</div>
+    </div>
+
+    <div class="detail-list">
+      <div class="detail-row">
+        <span>Empfänger</span>
+        <strong id="detail-recipient">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>IBAN</span>
+        <strong class="mono" id="detail-iban">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>Verwendungszweck</span>
+        <strong id="detail-description">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>Kategorie</span>
+        <strong id="detail-category">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>Referenz</span>
+        <strong class="mono" id="detail-reference">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>Datum</span>
+        <strong id="detail-date">–</strong>
+      </div>
+
+      <div class="detail-row">
+        <span>Von Konto</span>
+        <strong class="mono" id="detail-from-account">–</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
   <script>
     const SUPABASE_URL = 'https://ezuczblfykivnjfvfwka.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_4L0m_urGurJd94vMdhNxmg_Y52qK4m_';
@@ -826,14 +952,14 @@
   const amount = `${dir === 'expense' ? '-' : '+'}${fmtEUR(tx.amount)}`;
 
   return `
-    <div class="tx-item no-icon">
-      <div class="tx-main">
-        <div class="tx-title">${escapeHtml(txTitle(tx))}</div>
-        <div class="tx-sub">${escapeHtml(txSub(tx))}</div>
-      </div>
-      <div class="tx-amount ${dir === 'income' ? 'positive' : 'negative'} mono">${amount}</div>
+  <div class="tx-item no-icon" onclick="openTransactionDetail('${tx.id}')">
+    <div class="tx-main">
+      <div class="tx-title">${escapeHtml(txTitle(tx))}</div>
+      <div class="tx-sub">${escapeHtml(txSub(tx))}</div>
     </div>
-  `;
+    <div class="tx-amount ${dir === 'income' ? 'positive' : 'negative'} mono">${amount}</div>
+  </div>
+`;
 }).join('');
     }
 
