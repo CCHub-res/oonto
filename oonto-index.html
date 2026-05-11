@@ -202,6 +202,30 @@
       .sheet-grid{grid-template-columns:1fr;}
       .cc-number{font-size:1rem}
     }
+    .setting-action {
+  cursor: pointer;
+  justify-content: space-between;
+}
+
+.setting-toggle {
+  min-width: 76px;
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #e9e9e5;
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.setting-toggle.active {
+  background: #121515;
+  color: white;
+}
+
+.setting-toggle.inactive {
+  background: #eeeeeb;
+  color: #777;
+}
   </style>
 </head>
 <body>
@@ -887,28 +911,127 @@
     }
 
     function renderCardPage(){
-      qs('card-page-balance').textContent = fmtEUR(state.account?.balance || 0);
-      const card = state.cards[0] || null;
-      qs('card-monthly-limit').textContent = fmtEUR(card?.monthly_limit || 5000);
-      qs('card-daily-limit').textContent = fmtEUR(card?.daily_limit || 1000);
-      qs('card-used-month').textContent = fmtEUR(calcUsage('month'));
-      qs('card-used-day').textContent = fmtEUR(calcUsage('day'));
+  qs('card-page-balance').textContent = fmtEUR(state.account?.balance || 0);
 
-      const settings = [
-        ['Status', card?.status || 'active'],
-        ['Kontaktlos', card?.contactless_enabled ? 'Aktiv' : 'Deaktiviert'],
-        ['Online-Zahlungen', card?.online_payments_enabled ? 'Aktiv' : 'Deaktiviert'],
-        ['Bargeldbezug', card?.atm_withdrawals_enabled ? 'Aktiv' : 'Deaktiviert'],
-      ];
-      qs('card-settings-list').innerHTML = settings.map(([label,value]) => `
-        <div class="setting-item">
-          <div class="tx-icon">◌</div>
-          <div class="tx-main">
-            <div class="tx-title">${label}</div>
-            <div class="tx-sub">${value}</div>
-          </div>
-        </div>`).join('');
+  const card = state.cards[0] || null;
+
+  qs('card-monthly-limit').textContent = fmtEUR(card?.monthly_limit || 5000);
+  qs('card-daily-limit').textContent = fmtEUR(card?.daily_limit || 1000);
+  qs('card-used-month').textContent = fmtEUR(calcUsage('month'));
+  qs('card-used-day').textContent = fmtEUR(calcUsage('day'));
+
+  if (!card) {
+    qs('card-settings-list').innerHTML = `
+      <div class="empty center">Keine Karte gefunden.</div>
+    `;
+    return;
+  }
+
+  const isFrozen = card.status === 'frozen' || card.status === 'blocked';
+
+  const settings = [
+    {
+      label: 'Kartenstatus',
+      sub: isFrozen ? 'Die Karte ist aktuell eingefroren.' : 'Die Karte ist aktiv.',
+      value: isFrozen ? 'Inaktiv' : 'Aktiv',
+      active: !isFrozen,
+      action: `toggleCardStatus()`
+    },
+    {
+      label: 'Kontaktlos',
+      sub: 'Zahlungen per NFC erlauben.',
+      value: card.contactless_enabled ? 'Aktiv' : 'Inaktiv',
+      active: card.contactless_enabled,
+      action: `toggleCardSetting('contactless_enabled')`
+    },
+    {
+      label: 'Online-Zahlungen',
+      sub: 'Zahlungen im Internet erlauben.',
+      value: card.online_payments_enabled ? 'Aktiv' : 'Inaktiv',
+      active: card.online_payments_enabled,
+      action: `toggleCardSetting('online_payments_enabled')`
+    },
+    {
+      label: 'Bargeldbezug',
+      sub: 'Abhebungen am Geldautomaten erlauben.',
+      value: card.atm_withdrawals_enabled ? 'Aktiv' : 'Inaktiv',
+      active: card.atm_withdrawals_enabled,
+      action: `toggleCardSetting('atm_withdrawals_enabled')`
     }
+  ];
+
+  qs('card-settings-list').innerHTML = settings.map(item => `
+    <div class="setting-item setting-action" onclick="${item.action}">
+      <div class="tx-main">
+        <div class="tx-title">${item.label}</div>
+        <div class="tx-sub">${item.sub}</div>
+      </div>
+      <div class="setting-toggle ${item.active ? 'active' : 'inactive'}">
+        ${item.value}
+      </div>
+    </div>
+  `).join('');
+}
+
+    async function toggleCardSetting(field){
+  const card = state.cards[0];
+
+  if (!card) {
+    return toast('Keine Karte gefunden.');
+  }
+
+  const allowedFields = [
+    'contactless_enabled',
+    'online_payments_enabled',
+    'atm_withdrawals_enabled'
+  ];
+
+  if (!allowedFields.includes(field)) {
+    return toast('Diese Einstellung kann nicht geändert werden.');
+  }
+
+  const nextValue = !card[field];
+
+  const { error } = await sb
+    .from('cards')
+    .update({ [field]: nextValue })
+    .eq('id', card.id);
+
+  if (error) {
+    console.error('Karten-Update Fehler:', error);
+    return toast(error.message || 'Karteneinstellung konnte nicht geändert werden.');
+  }
+
+  await loadCards();
+  renderCardPage();
+
+  toast(nextValue ? 'Einstellung aktiviert.' : 'Einstellung deaktiviert.');
+}
+
+async function toggleCardStatus(){
+  const card = state.cards[0];
+
+  if (!card) {
+    return toast('Keine Karte gefunden.');
+  }
+
+  const nextStatus = card.status === 'active' ? 'frozen' : 'active';
+
+  const { error } = await sb
+    .from('cards')
+    .update({ status: nextStatus })
+    .eq('id', card.id);
+
+  if (error) {
+    console.error('Kartenstatus Fehler:', error);
+    return toast(error.message || 'Kartenstatus konnte nicht geändert werden.');
+  }
+
+  await loadCards();
+  renderCardPage();
+
+  toast(nextStatus === 'active' ? 'Karte aktiviert.' : 'Karte eingefroren.');
+}
 
     function renderProfile(){
       const p = state.profile || {};
