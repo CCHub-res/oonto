@@ -802,7 +802,6 @@
         const amount = `${dir === 'expense' ? '-' : '+'}${fmtEUR(tx.amount)}`;
         return `
           <div class="tx-item">
-            <div class="tx-icon">${txIcon(tx)}</div>
             <div class="tx-main">
               <div class="tx-title">${escapeHtml(txTitle(tx))}</div>
               <div class="tx-sub">${escapeHtml(txSub(tx))}</div>
